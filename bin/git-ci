@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 set -e
-ci_config="$(git rev-parse --git-common-dir)/ci"
+git_ci_dir="$(pwd)/$(git rev-parse --git-common-dir)"
+git_ci_config="$git_ci_dir/ci"
 
 # Utilities
 # ---------
@@ -38,14 +39,14 @@ commit_exists() {
 # Configuration
 # -------------
 
-git_ci_config() { git config --file="$ci_config" "$@" ; }
+git_ci_config() { git config --file="$git_ci_config" "$@" ; }
 
 git_ci_config_get() {
     local config_entry
     config_entry="$1" && shift
 
     git_ci_config --get "$config_entry" \
-        || fatal "Entry not found in '$ci_config': $config_entry"
+        || fatal "Entry not found in '$git_ci_config': $config_entry"
 }
 
 git_ci_config_activeTests()  { git_ci_config_get "ci.activeTests"             ; }
