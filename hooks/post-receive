@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+git_ci_repo="$HOME/src/git-ci"
+export PATH="$git_ci_repo/bin:$PATH"
+
 while read old_sha1 new_sha1 ref_name; do
     git ci request "$ref_name"
 done
