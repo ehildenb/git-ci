@@ -5,7 +5,7 @@ set -e
 
 testset="$1" && shift
 
-ci_config=".ci"
+ci_config="$(git rev-parse --git-dir)/ci"
 ci_ref_prefix="refs/ci/$testset"
 
 # Utilities
