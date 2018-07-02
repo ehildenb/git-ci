@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+while read old_sha1 new_sha1 ref_name; do
+    echo "$ref_name" >> "$GIT_DIR/ci_requests"
+done
