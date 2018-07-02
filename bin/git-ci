@@ -57,7 +57,7 @@ git_ci_config_command()      { git_ci_config_get "test.$testset.command"      ; 
 # ---------------
 
 git_ci_add() {
-    for file in $(git_ci_tracked_files); do
+    for file in $(git_ci_config_trackedFiles); do
         [[ ! -f "$file" ]] || git add --force "$file"
         [[ ! -d "$file" ]] || git add --force "$file"
     done
@@ -161,7 +161,7 @@ git_ci_listdiff() {
 
     echo "$source_commit_one"
     while read source_commit_two; do
-        if ! git_ci_diff "$source_commit_two" "$source_commit_one" --quiet -- $(git_ci_tracked_files); then
+        if ! git_ci_diff "$source_commit_two" "$source_commit_one" --quiet -- $(git_ci_config_trackedFiles); then
             echo "$source_commit_two"
             source_commit_one="$source_commit_two"
         fi
@@ -352,7 +352,7 @@ git_ci_run_bisect() {
 
     git_ci_run "$source_commit_one" "$source_commit_two" || exit_status="$?"
 
-    if ! git_ci_diff "$source_commit_one" "$source_commit_two" --quiet -- $(git_ci_tracked_files); then
+    if ! git_ci_diff "$source_commit_one" "$source_commit_two" --quiet -- $(git_ci_config_trackedFiles); then
         mid_rev="$(git rev-list --bisect "$source_commit_one..$source_commit_two")"
         [[ "$mid_rev" != '' ]] \
             && [[ "$mid_rev" != "$source_commit_one" ]] \
