@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-ci_config="$(git rev-parse --git-dir)/ci"
+ci_config="$(git rev-parse --git-common-dir)/ci"
 
 # Utilities
 # ---------
