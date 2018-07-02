@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-git_ci_repo="$HOME/src/git-ci"
-
 while read old_sha1 new_sha1 ref_name; do
-    echo "$(bash -c pwd) $ref_name" >> "$git_ci_repo/ci_requests"
+    git ci request "$ref_name"
 done
