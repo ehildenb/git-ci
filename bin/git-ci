@@ -259,13 +259,10 @@ git_ci_cleanup() {
 }
 
 git_ci_request() {
-    local source_commit request_file
+    local source_commit request_file active_tests
     set_source_commit "$@" || shift "$?"
-    request_file="$(git_ci_config_requestFile)"
 
-    for testset in $(git_ci_config_activeTests); do
-        echo "$(pwd)/$(git rev-parse --git-dir) $source_commit $testset" >> "$request_file"
-    done
+    echo "$git_ci_dir $source_commit $(git_ci_config_activeTests)" >> "$(git_ci_config_requestFile)"
 }
 
 git_ci_test() {
