@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
-# set -x
-
-testset="$1" && shift
-
 ci_config="$(git rev-parse --git-dir)/ci"
-ci_ref_prefix="refs/ci/$testset"
 
 # Utilities
 # ---------
@@ -53,11 +48,10 @@ git_ci_tracked_files() {
 }
 
 git_ci_config_exists_or_die() {
-    local config_entry total_entry
+    local config_entry
     config_entry="$1"
-    total_entry="test.$testset.$config_entry"
-    git_ci_config --get "$total_entry" &>/dev/null \
-        || fatal "Entry not found: $total_entry"
+    git_ci_config --get "$config_entry" &>/dev/null \
+        || fatal "Entry not found: $config_entry"
 }
 
 # Storing Results
@@ -386,8 +380,21 @@ git_ci_run_sparse() {
 # Main
 # ----
 
-git_ci_config_exists_or_die "command"
-git_ci_config_exists_or_die "trackedFiles"
+# Commands which do not contain a testset as the first argument
+git_ci_command="$1"
+
+case "$git_ci_command" in
+    active) shift && git_ci_config --get "ci.activeTests" && exit 0 ;;
+    config) shift && git_ci_config "$@"                   && exit 0 ;;
+esac
+
+# Commands which do contain a testset as the first argument
+testset="$1" && shift
+
+ci_ref_prefix="refs/ci/$testset"
+
+git_ci_config_exists_or_die "test.$testset.command"
+git_ci_config_exists_or_die "test.$testset.trackedFiles"
 
 git_ci_command="$1" && shift
 notif "$git_ci_command $testset $@"
