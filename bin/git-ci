@@ -260,10 +260,12 @@ git_ci_cleanup() {
 }
 
 git_ci_request() {
-    local source_commit request_file active_tests
+    local source_commit ci_test
     set_source_commit "$@" || shift "$?"
 
-    echo "$git_ci_dir $source_commit $(git_ci_config_activeTests)" >> "$(git_ci_config_requestFile)"
+    for ci_test in $(git_ci_config_activeTests); do
+        echo "$git_ci_dir $source_commit $ci_test" >> "$(git_ci_config_requestFile)"
+    done
 }
 
 git_ci_run_request() {
