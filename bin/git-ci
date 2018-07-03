@@ -5,6 +5,7 @@ git_ci_dir="$(pwd)/$(git rev-parse --git-common-dir)"
 git_ci_config="$git_ci_dir/ci"
 git_ci_worktrees="$git_ci_dir/ci_worktrees"
 git_ci_repo="$HOME/src/git-ci"
+git_ci_resources="$git_ci_repo/resources"
 
 # Utilities
 # ---------
@@ -279,23 +280,55 @@ git_ci_request() {
 }
 
 git_ci_run_request() {
-    local request_file request_file_tmp repo ref ci_tests ci_test ci_base
+    local request_file request_file_tmp repo ref ci_test ci_base run_repo run_ref run_ci_test
+    local resources_dir resources_file total_resources
 
     # NOTE: must be run from directory with `ci_requests` present!
-    request_file="ci_requests"
+    request_file="$(pwd)/ci_requests"
     request_file_tmp="$(mktemp "$request_file.XXXXXX")"
     trap "rm -rf $request_file_tmp" INT TERM EXIT
     mv "$request_file" "$request_file_tmp"
 
-    while read repo ref ci_tests; do
-        (   cd "$repo"
-            ci_base="$(git ci config --get 'ci.ciBase')"
-            for ci_test in $ci_tests; do
-                git ci "$ci_test" run-sparse "$ci_base" "$ref"
-                git branch --force "ci/$ci_test/${ref#refs/heads/}" "$(git ci "$ci_test" gen-hist "$ref")"
-            done
-        )
+    run_repo=''
+    run_ref=''
+    run_ci_test=''
+
+    while read repo ref ci_test; do
+
+        resources_dir="$git_ci_resources/$repo"
+        resources_file="$resources_dir/$ci_test"
+
+        if [[ "$run_repo" == '' ]] && [[ ! -f "$resources_file" ]]; then
+
+            mkdir -p "$resources_dir"
+            echo "$(cd "$repo" ; git ci $ci_test resources)" > "$resources_file"
+            trap "rm -rf $resources_file" INT TERM EXIT
+
+            total_resources="$({ find "$git_ci_resources" -type f -exec cat {} \; | tr '\n' '+' ; echo 0 ; } | bc)"
+            if [[ "$total_resources" -le 100 ]]; then
+                run_repo="$repo"
+                run_ref="$ref"
+                run_ci_test="$ci_test"
+            else
+                notif "Postponing job (resource limit reached): $repo $rep $ci_test"
+                echo "$repo $ref $ci_test" >> "$request_file"
+            fi
+
+        else
+            notif "Postponing job (job already started): $repo $ref $ci_test"
+            echo "$repo $ref $ci_test" >> "$request_file"
+        fi
     done < "$request_file_tmp"
+
+    if [[ "$run_repo" != '' ]]; then
+        notif "Running tests: $run_repo $run_ref $run_ci_test"
+        ( cd "$run_repo"
+          ci_base="$(git ci config --get 'ci.ciBase')"
+          git ci "$run_ci_test" run-sparse "$ci_base" "$run_ref"
+        )
+    else
+        notif "No tests started."
+    fi
 }
 
 git_ci_test() {
