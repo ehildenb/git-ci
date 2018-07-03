@@ -280,7 +280,7 @@ git_ci_run_request() {
             ci_base="$(git ci config --get 'ci.ciBase')"
             for ci_test in $ci_tests; do
                 git ci "$ci_test" run-sparse "$ci_base" "$ref"
-                git branch "ci/$ci_test/${ref#refs/heads/}" "$(git ci "$ci_test" gen-hist "$ref")"
+                git branch --force "ci/$ci_test/${ref#refs/heads/}" "$(git ci "$ci_test" gen-hist "$ref")"
             done
         )
     done < "$request_file_tmp"
