@@ -4,6 +4,7 @@ set -e
 git_ci_dir="$(pwd)/$(git rev-parse --git-common-dir)"
 git_ci_config="$git_ci_dir/ci"
 git_ci_worktrees="$git_ci_dir/ci_worktrees"
+git_ci_repo="$HOME/src/git-ci"
 
 # Utilities
 # ---------
@@ -265,6 +266,26 @@ git_ci_request() {
     echo "$git_ci_dir $source_commit $(git_ci_config_activeTests)" >> "$(git_ci_config_requestFile)"
 }
 
+git_ci_run_request() {
+    local request_file request_file_tmp repo ref ci_tests ci_test ci_base
+
+    # NOTE: must be run from directory with `ci_requests` present!
+    request_file="ci_requests"
+    request_file_tmp="$(mktemp "$request_file.XXXXXX")"
+    trap "rm -rf $request_file_tmp" INT TERM EXIT
+    mv "$request_file" "$request_file_tmp"
+
+    while read repo ref ci_tests; do
+        (   cd "$repo"
+            ci_base="$(git ci config --get 'ci.ciBase')"
+            for ci_test in $ci_tests; do
+                git ci "$ci_test" run-sparse "$ci_base" "$ref"
+                git branch "ci/$ci_test/${ref#refs/heads/}" "$(git ci "$ci_test" gen-hist "$ref")"
+            done
+        )
+    done < "$request_file_tmp"
+}
+
 git_ci_test() {
     local test_command
 
@@ -394,9 +415,10 @@ git_ci_run_sparse() {
 git_ci_command="$1"
 
 case "$git_ci_command" in
-    active)  shift && git_ci_config_activeTests && exit 0 ;;
-    config)  shift && git_ci_config  "$@"       && exit 0 ;;
-    request) shift && git_ci_request "$@"       && exit 0 ;;
+    active)      shift && git_ci_config_activeTests && exit 0 ;;
+    config)      shift && git_ci_config      "$@"   && exit 0 ;;
+    request)     shift && git_ci_request     "$@"   && exit 0 ;;
+    run-request) shift && git_ci_run_request        && exit 0 ;;
 esac
 
 # Commands which do contain a testset as the first argument
