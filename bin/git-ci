@@ -408,7 +408,7 @@ git_ci_config_command      "test.$testset.command"      >/dev/null
 git_ci_config_trackedFiles "test.$testset.trackedFiles" >/dev/null
 
 git_ci_command="$1" && shift
-notif "$git_ci_command $testset $@"
+notif "$git_ci_command $@"
 case "$git_ci_command" in
     cleanup)     git_ci_cleanup          ;;
     test)        git_ci_test             ;;
