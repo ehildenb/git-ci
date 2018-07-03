@@ -1,1 +1,2 @@
-ci_requests
+/ci_requests*
+/resources/*
