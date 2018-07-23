@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+repo_dir="$HOME/src/git-ci"
+export PATH="$HOME/.local/bin:$PATH"
+
+[[ ! -z "$1" ]] && branch="$1"
+pushd "$repo_dir" \
+    && git fetch \
+    && git reset --hard "origin/$branch" \
+    && popd
