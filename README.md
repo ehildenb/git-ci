@@ -73,8 +73,18 @@ export PATH="$PATH:/path/to/ci/src/git-ci/bin"
 Git Tools
 ---------
 
+### Shell Commands
+
 Directory `bin` contains extra `git` commands which help with using this tool.
 
 -   `git-ci` is the main test executor.
 -   `git-replay` allows replaying an existing git commit.
 -   `git-rebased-on` checks if the given pair of commits are related ancestrally.
+
+### Interactive Server `git-shell`
+
+Directory `git-shell-commands` contains helpful commands for admins of the CI server.
+
+-   `help` lists the available commands.
+-   `sync` syncs the checked out version of the CI repo with the bare version.
+
