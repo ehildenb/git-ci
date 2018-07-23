@@ -46,7 +46,8 @@ git clone ~/git/src/git-ci.git
 Push the correct version of the `git-ci` repo to the server (on your local machine):
 
 ```sh
-git push CI-SERVER --all
+git remote add ci 'ssh://CI-SERVER/~/git/src/git-ci.git'
+git push ci --all
 ```
 
 Back on the server, pull down the changes:
