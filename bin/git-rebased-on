@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+
+upstream_branch="$1" ; shift
+upstream_hash="$(git show-ref --hash "$upstream_branch")"
+merge_base_hash="$(git merge-base "$upstream_branch" 'HEAD')"
+
+exit_status='0'
+[[ "$upstream_hash" == "$merge_base_hash" ]] || exit_status="$?"
+
+[[ "$exit_status" == '0' ]] \
+    || >&2 echo "HEAD not based on '$upstream_branch'"
+
+exit "$exit_status"

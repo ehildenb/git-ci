@@ -71,3 +71,4 @@ Directory `bin` contains extra `git` commands which help with using this tool.
 
 -   `git-ci` is the main test executor.
 -   `git-replay` allows replaying an existing git commit.
+-   `git-rebased-on` checks if the given pair of commits are related ancestrally.
