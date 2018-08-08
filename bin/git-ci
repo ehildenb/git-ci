@@ -411,7 +411,7 @@ git_ci_run_linear() {
 
     set_source_commit_one_two "$@" || shift "$?"
 
-    git_ci_run $(git rev-list "$source_commit_one^..$source_commit_two")
+    git_ci_run $(git rev-list "$source_commit_one^..$source_commit_two" | tac)
 }
 
 git_ci_run_bisect() {
