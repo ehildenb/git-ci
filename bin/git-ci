@@ -360,6 +360,7 @@ git_ci_run() {
 
         worktree="$git_ci_worktrees/$source_commit_id"
         git worktree add "$worktree" "$source_commit_id"
+        trap "git worktree remove --force $worktree ; rm -rf $worktree ;" INT TERM EXIT
 
         (   cd "$worktree"
             git checkout "$source_commit_id"
@@ -370,8 +371,6 @@ git_ci_run() {
             git_ci_commit
             git_ci_cleanup
         )
-
-        git worktree remove --force "$worktree"
     fi
 
     if [[ "$#" != '0' ]]; then
