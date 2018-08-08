@@ -50,7 +50,10 @@ Setup nginx Reverse Proxy
 First install [certbot](https://certbot.eff.org/) and the [nginx certbot plugin](https://certbot.eff.org/lets-encrypt/ubuntuxenial-nginx.html).
 
 The supplied `nginx/nginx.conf` and `nginx/sites-enabled/default` setup reverse proxy for Buildbot.
-Copy them into the correct locations in `/etc/nginx`, then generate the certbot sections by running:
+Copy them into the correct locations in `/etc/nginx`, then fill in the field `{###SERVER_NAME###}` in file `nginx/sites-enabled/default` to be the URL (or IP) the server is at.
+Once setup, verify that the nginx config is good with `sudo nginx -t`.
+
+Now we fill in the commented out certbot sections of `nginx/sites-enabled/default` using the certbot nginx plugin.
 
 ```sh
 sudo certbot --nginx certonly
