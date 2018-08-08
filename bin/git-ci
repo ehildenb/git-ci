@@ -330,6 +330,7 @@ git_ci_run_request() {
         ( cd "$run_repo"
           ci_base="$(git ci config --get 'ci.ciBase')"
           git ci "$run_ci_test" run-sparse "$ci_base" "$run_ref"
+          git branch --force "ci/$run_ref/$run_ci_test" "$(git ci "$run_ci_test" gen-hist "$run_ref")"
         )
     else
         notif "No tests started."
