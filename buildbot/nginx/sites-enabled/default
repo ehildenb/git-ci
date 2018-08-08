@@ -8,10 +8,10 @@ server {
     server_name {###SERVER_NAME###};
 
     ##### managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/{###SERVER_NAME###}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/{###SERVER_NAME###}/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    # ssl_certificate /etc/letsencrypt/live/{###SERVER_NAME###}/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/{###SERVER_NAME###}/privkey.pem;
+    # include /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
     ##### managed by Certbot
 
     index index.html index.htm index.nginx-debian.html;
@@ -36,13 +36,13 @@ server {
 }
 
 ##### managed by Certbot
-server {
-    if ($host = {###SERVER_NAME###}) {
-        return 301 https://$host$request_uri;
-    }
-
-    server_name {###SERVER_NAME###};
-    listen 80;
-    return 404;
-}
+# server {
+#     if ($host = {###SERVER_NAME###}) {
+#         return 301 https://$host$request_uri;
+#     }
+#
+#     server_name {###SERVER_NAME###};
+#     listen 80;
+#     return 404;
+# }
 ##### managed by Certbot

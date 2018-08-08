@@ -47,19 +47,27 @@ buildbot-worker start ~/buildbot/WORKER_NAME
 Setup nginx Reverse Proxy
 -------------------------
 
+First install [certbot](https://certbot.eff.org/) and the [nginx certbot plugin](https://certbot.eff.org/lets-encrypt/ubuntuxenial-nginx.html).
+
 The supplied `nginx/nginx.conf` and `nginx/sites-enabled/default` setup reverse proxy for Buildbot.
-Copy them into the correct locations in `/etc/nginx`, then run:
+Copy them into the correct locations in `/etc/nginx`, then generate the certbot sections by running:
 
 ```sh
-# Check config validity
-sudo nginx -t
-
-# Restart nginx if good (Ubuntu example)
-sudo service nginx restart
+sudo certbot --nginx certonly
 ```
 
-Note that the `nginx` config has entries inserted by `certbot` to get SSL certs from Let's Encrypt.
-That is not documented here, but must be done.
+Add the generated sections into the commented out portions of `nginx/sites-enabled/default`, then check the validity with:
+
+```sh
+sudo nginx -t
+```
+
+Given that the config is valid, enabled the nginx daemon.
+
+```sh
+# Ubuntu example
+sudo service nginx restart
+```
 
 Setup Github Webhook/Status Check
 ---------------------------------
