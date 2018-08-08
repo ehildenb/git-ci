@@ -285,6 +285,11 @@ git_ci_run_request() {
 
     # NOTE: must be run from directory with `ci_requests` present!
     request_file="$(pwd)/ci_requests"
+    if [[ ! -f "$request_file" ]]; then
+        notif "No requests pending."
+        return 0
+    fi
+
     request_file_tmp="$(mktemp "$request_file.XXXXXX")"
     trap "rm -rf $request_file_tmp" INT TERM EXIT
     mv "$request_file" "$request_file_tmp"
