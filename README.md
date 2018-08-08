@@ -88,3 +88,9 @@ Directory `git-shell-commands` contains helpful commands for admins of the CI se
 -   `help` lists the available commands.
 -   `sync` syncs the checked out version of the CI repo with the bare version.
 
+CI Servers
+----------
+
+### Buildbot
+
+Directory `buildbot` contains instructions for setting up Buildbot and a sample config.
