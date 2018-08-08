@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+# Buildbot master directory
+master="$HOME/master"
+
+# Default branch of `git-ci` repo to use
+branch="master"
+
+export PATH="$HOME/.local/bin:$PATH"
+
+bb_checkconfig() {
+    buildbot checkconfig "$master"
+}
+
+bb_reconfig() {
+    bb_checkconfig \
+        && buildbot reconfig "$master"
+}
+
+bb_restart() {
+    bb_checkconfig \
+        && buildbot restart "$master"
+}
+
+bb_worker() {
+    local worker_command="$1" ; shift
+    local worker_dir="$1"     ; shift
+    buildbot-worker "$worker_command" "$worker_dir"
+}
+
+bb_command="$1" && shift
+case "$bb_command" in
+    checkconfig) bb_checkconfig      ;;
+    reconfig)    bb_reconfig         ;;
+    restart)     bb_restart          ;;
+    worker)      bb_worker      "$@" ;;
+    *) echo "
+usage: $0 [checkconfig|reconfig|restart]
+       $0 worker [start|stop|restart] [worker-name]
+"
+       exit 1
+       ;;
+esac
