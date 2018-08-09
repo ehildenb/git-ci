@@ -44,6 +44,15 @@ buildbot        start ~/buildbot/master
 buildbot-worker start ~/buildbot/WORKER_NAME
 ```
 
+### Optional
+
+If you want to used the `rebased-on` build-step in your builds, ensure that Buildbot will be able to find it by symlinking it:
+
+```sh
+cd ~/.local/bin
+ln -s $HOME/src/git-ci/bin/git-rebased-on
+```
+
 Setup nginx Reverse Proxy
 -------------------------
 
