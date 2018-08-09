@@ -47,19 +47,9 @@ buildbot-worker start ~/buildbot/WORKER_NAME
 Setup nginx Reverse Proxy
 -------------------------
 
-First install [certbot](https://certbot.eff.org/) and the [nginx certbot plugin](https://certbot.eff.org/lets-encrypt/ubuntuxenial-nginx.html).
-
 The supplied `nginx/nginx.conf` and `nginx/sites-enabled/default` setup reverse proxy for Buildbot.
 Copy them into the correct locations in `/etc/nginx`, then fill in the field `{###SERVER_NAME###}` in file `nginx/sites-enabled/default` to be the URL (or IP) the server is at.
-Once setup, verify that the nginx config is good with `sudo nginx -t`.
-
-Now we fill in the commented out certbot sections of `nginx/sites-enabled/default` using the certbot nginx plugin.
-
-```sh
-sudo certbot --nginx certonly
-```
-
-Add the generated sections into the commented out portions of `nginx/sites-enabled/default`, then check the validity with:
+Once setup, verify that the nginx config is good with:
 
 ```sh
 sudo nginx -t
@@ -67,10 +57,23 @@ sudo nginx -t
 
 Given that the config is valid, enabled the nginx daemon.
 
+### Optional
+
+Install [certbot](https://certbot.eff.org/) and the [nginx certbot plugin](https://certbot.eff.org/lets-encrypt/ubuntuxenial-nginx.html).
+Fill in the commented out certbot sections of `nginx/sites-enabled/default` using the certbot nginx plugin.
+Note that you must have a domain name for this to work.
+
 ```sh
-# Ubuntu example
-sudo service nginx restart
+sudo certbot --nginx
 ```
+
+Double-check the nginx config:
+
+```sh
+sudo nginx -t
+```
+
+It's also recommended that you set up certbot auto-renewal.
 
 Setup Github Webhook/Status Check
 ---------------------------------
