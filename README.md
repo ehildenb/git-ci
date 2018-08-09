@@ -94,4 +94,4 @@ CI Servers
 
 ### Buildbot
 
-Directory `buildbot` contains instructions for setting up Buildbot and a sample config.
+Directory [buildbot](buildbot/) contains instructions for setting up Buildbot and a sample config.
