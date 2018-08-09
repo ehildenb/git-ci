@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Buildbot master directory
-master="$HOME/master"
+master="$HOME/buildbot/master"
 
 # Default branch of `git-ci` repo to use
 branch="master"
@@ -23,9 +23,19 @@ bb_restart() {
 }
 
 bb_worker() {
-    local worker_command="$1" ; shift
-    local worker_dir="$1"     ; shift
-    buildbot-worker "$worker_command" "$worker_dir"
+    local worker_command worker_name worker_password worker_port
+
+    worker_command="$1" ; shift
+    worker_name="$1"    ; shift
+
+    case "$worker_command" in
+        create) worker_password="$1" ; shift
+                worker_port="$1"     ; shift
+                buildbot-worker create-worker "$HOME/buildbot/$worker_name" localhost:"$worker_port" "$worker_name" "$worker_password"
+                ;;
+        *)      buildbot-worker "$worker_command" "$HOME/buildbot/$worker_name"
+                ;;
+    esac
 }
 
 bb_command="$1" && shift

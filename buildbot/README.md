@@ -32,7 +32,7 @@ Edit the appropriate worker information files.
 
 ```sh
 cd ~/buildbot
-buildbot-worker create-worker WORKER_NAME localhost:PORT WORKER_NAME WORKER_PASS
+buildbot-worker create-worker $HOME/buildbot/WORKER_NAME localhost:PORT WORKER_NAME WORKER_PASS
 vim ~/WORKER_NAME/info/admin
 vim ~/WORKER_NAME/info/host
 ```
