@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-repo_dir="$HOME/src/git-ci"
+export GIT_WORK_TREE="$HOME/src/git-ci"
+export GIT_DIR="$GIT_WORK_TREE/.git"
 export PATH="$HOME/.local/bin:$PATH"
 
 branch="master"
 [[ -z "$1" ]] || branch="$1"
 
-pushd "$repo_dir" \
-    && git fetch \
-    && git reset --hard "origin/$branch" \
-    && popd
+git fetch && git reset --hard "origin/$branch"
