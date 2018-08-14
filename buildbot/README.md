@@ -99,6 +99,8 @@ Github OAuth Setup
 ------------------
 
 This enables logging into Buildbot via a "Login with GitHub" link (to do things like forcing rebuilds/manually triggering builds).
+On Github, setup OAuth authentication for one of your users.
+For the callback URL, pick: https://CI_SERVER_URL/auth/login.
 
 Setup OAuth with your user (or a dummy user for reporting CI information on repos in an organization).
 `CLIENT_ID`, `CLIENT_SECRET`, and `ORGANIZATION_NAME` come from:
@@ -111,6 +113,8 @@ c['www'] = { 'auth'  : util.GitHubAuth(CLIENT_ID, CLIENT_SECRET)
                                  )
            }
 ```
+
+Users that want to use the "Login with Github" button on the Buildbot website must be *public* members of the Github `"ORGANIZATION_NAME"`.
 
 TODO
 ====
