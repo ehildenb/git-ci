@@ -89,6 +89,13 @@ Directory `git-shell-commands` contains helpful commands for admins of the CI se
 -   `sync` syncs the checked out version of the CI repo with the bare version.
 -   `bb` provides a simple interface to a running instance of Buildbot.
 
+### Git Hooks
+
+Symlink to these hooks in the relevant repositories to enable them.
+
+-   `post-receive.ci-requests`: insert a `git-ci` request into the queue of requests to be run on push.
+-   `post-receive.sync-bb`: automatically sync the `git-ci` checked out repository on pushes to the bare repository.
+
 CI Servers
 ----------
 
