@@ -53,6 +53,19 @@ cd ~/.local/bin
 ln -s $HOME/src/git-ci/bin/git-rebased-on
 ```
 
+### Optional
+
+If you want to automatically reconfigure Buildbot on pushes to the bare CI repo on the server, you need to enable the `post-receive.sync-bb` hook.
+
+```sh
+cd ~/git/src/git-ci.git/hooks
+ln -s "$HOME/src/git-ci/hooks/post-receive.sync-bb" post-receive
+```
+
+**IMPORTANT**: Make sure you set the correct branch to use in `git-shell-commands/sync` for syncing to.
+
+Now on pushes to the bare repository, the non-bare repository will automatically `sync` and restart Buildbot.
+
 Setup nginx Reverse Proxy
 -------------------------
 
