@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+# Set where the git-ci repo is
+git_ci_repo="$HOME/src/git-ci"
+
+export PATH="$git_ci_repo/git-shell-commands:$PATH"
+sync
+bb reconfig
