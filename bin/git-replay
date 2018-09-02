@@ -24,4 +24,4 @@ clean_worktree_or_die() {
 clean_worktree_or_die
 
 git log --max-count=1 --format='format:%b' "$commit_id" | bash
-git commit --reuse-message="$commit_id" --no-edit
+git commit --reuse-message="$commit_id" --date="$(date)" --no-edit
