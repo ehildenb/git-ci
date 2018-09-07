@@ -373,6 +373,7 @@ git_ci_run() {
         )
     fi
 
+    git branch --force "_ci" "$(git ci "$testset" gen-hist "$source_commit")"
     if [[ "$#" != '0' ]]; then
         git_ci_run "$@" || exit_status="$?"
     fi
