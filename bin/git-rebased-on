@@ -18,10 +18,8 @@ fi
 
 # check linear history
 for rev in $(git rev-list HEAD "^$merge_branch"); do
-    if git rev-parse "$rev^" &>/dev/null; then
+    if git rev-parse "$rev^"'2' &>/dev/null; then
         echo "Merge commit found: $rev" >&2
         exit 1
     fi
 done
-
-exit "$exit_status"
