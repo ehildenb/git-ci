@@ -2,14 +2,26 @@
 
 set -e
 
-upstream_branch="$1" ; shift
-upstream_hash="$(git show-ref --hash "$upstream_branch")"
-merge_base_hash="$(git merge-base "$upstream_branch" 'HEAD')"
+merge_branch="$1" ; shift
+[[ -z "$1" ]] || { linear="$1" ; shift ; }
 
-exit_status='0'
-[[ "$upstream_hash" == "$merge_base_hash" ]] || exit_status="$?"
+# check "ahead of master"
+common_hash="$(git rev-parse "$merge_branch")"
+merge_base_hash="$(git merge-base "$merge_branch" 'HEAD')"
 
-[[ "$exit_status" == '0' ]] \
-    || >&2 echo "HEAD not based on '$upstream_branch'"
+if [[ "$common_hash" != "$merge_base_hash" ]]; then
+    echo "HEAD not based on '$merge_branch'" >&2
+    exit 1
+fi
+
+[[ ! -z "$linear" ]] || exit 0
+
+# check linear history
+for rev in $(git rev-list HEAD "^$merge_branch"); do
+    if git rev-parse "$rev^" &>/dev/null; then
+        echo "Merge commit found: $rev" >&2
+        exit 1
+    fi
+done
 
 exit "$exit_status"
