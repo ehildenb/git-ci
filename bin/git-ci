@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 
 set -e
-git_ci_dir="$(pwd)/$(git rev-parse --git-common-dir)"
+git_ci_dir="$(git rev-parse --git-common-dir)"
 git_ci_config="$git_ci_dir/ci"
 git_ci_worktrees="$git_ci_dir/ci_worktrees"
 git_ci_repo="$HOME/src/git-ci"
 git_ci_resources="$git_ci_repo/resources"
+git_ci_tmpdir="$git_ci_dir/ci_tmp"
+
+mkdir -p "$git_ci_tmpdir"
 
 # Utilities
 # ---------
@@ -72,8 +75,10 @@ git_ci_config_resources()    { git_ci_config_get_or "test.$testset.resources" 10
 
 git_ci_add() {
     for file in $(git_ci_config_trackedFiles); do
-        [[ ! -f "$file" ]] || git add --force "$file"
-        [[ ! -d "$file" ]] || git add --force "$file"
+        if [[ -f "$file" ]] || [[ -d "$file" ]]; then
+            notif "tracking: $file"
+            git add --force "$file"
+        fi
     done
 }
 
@@ -92,6 +97,13 @@ git_ci_commit() {
     tested_commit="$(git commit-tree -p "$tested_commit_parent" "$tested_tree" -m "ci: run '$testset' on commit '$source_commit'")"
 
     git update-ref "$ci_ref" "$tested_commit"
+}
+
+git_ci_track_files() {
+    if ( git_ci_config_trackedFiles &>/dev/null ; ); then
+        git_ci_add
+        git_ci_commit
+    fi
 }
 
 # Reading Results
@@ -344,6 +356,60 @@ git_ci_test() {
     bash -c "$test_command"
 }
 
+git_ci_steps_test() {
+    local test_step exit_status summary_line summary_file output_file
+
+    exit_status='0'
+    output_file="$(mktemp  --tmpdir="$git_ci_tmpdir"  output.XXXXXXX)"
+    summary_file="$(mktemp --tmpdir="$git_ci_tmpdir" summary.XXXXXXX)"
+    trap "rm -rf $output_file $summary_file" INT TERM EXIT
+
+    git_ci_cleanup
+
+    while read test_step; do
+        notif "running: $test_step"
+
+        # notice use of `which time` to avoid shell builtin time.
+        `which time` --quiet --format '%x %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
+            || exit_status="$?"
+
+        while read summary_line; do
+            notif "summary: $summary_line"
+        done < <(cat "$summary_file" | tail -n1)
+
+        if [[ "$exit_status" == '0' ]]; then
+            notif "success: $test_step"
+        else
+            notif "failure: $test_step"
+            break
+        fi
+    done < <(git_ci_config --get-all "test.$testset.step")
+
+    # record output files
+    git_ci_track_files
+    git_ci_cleanup
+
+    # record notes
+    git notes --ref ci/summary append         --file "$summary_file"
+    git notes --ref ci/output  add    --force --file "$output_file"
+
+    if [[ "$exit_status" == '0' ]]; then
+        notif "test success"
+    else
+        fatal "test failure"
+    fi
+}
+
+git_ci_steps_test_all() {
+    local target_branch keep_going
+
+    target_branch="$1" && shift
+
+    while git test-next "tested-$testset" "$target_branch" "$@" git ci "$testset" steps-test "$keep_going"; do
+        continue
+    done
+}
+
 git_ci_run() {
     local source_commit source_commit_id curhead exit_status worktree
     set_source_commit "$@" || shift "$?"
@@ -477,36 +543,39 @@ testset="$1" && shift
 
 ci_ref_prefix="refs/ci/$testset"
 
-git_ci_config_command      "test.$testset.command"      >/dev/null
-git_ci_config_trackedFiles "test.$testset.trackedFiles" >/dev/null
+# git_ci_config_command      "test.$testset.command"      >/dev/null
+# git_ci_config_trackedFiles "test.$testset.trackedFiles" >/dev/null
 
 git_ci_command="$1" && shift
 notif "$git_ci_command $@"
 case "$git_ci_command" in
-    cleanup)     git_ci_cleanup          ;;
-    test)        git_ci_test             ;;
-    add)         git_ci_add              ;;
-    commit)      git_ci_commit           ;;
-    get)         git_ci_get         "$@" ;;
-    resources)   git_ci_config_resources ;;
-    run)         git_ci_run         "$@" ;;
-    run-linear)  git_ci_run_linear  "$@" ;;
-    run-bisect)  git_ci_run_bisect  "$@" ;;
-    run-sparse)  git_ci_run_sparse  "$@" ;;
-    diff)        git_ci_diff        "$@" ;;
-    show)        git_ci_show        "$@" ;;
-    cherry-pick) git_ci_cherry_pick "$@" ;;
-    last)        git_ci_last        "$@" ;;
-    gen-hist)    git_ci_gen_hist    "$@" ;;
-    list)        git_ci_list        "$@" ;;
-    listdiff)    git_ci_listdiff    "$@" ;;
-    clear)       git_ci_clear       "$@" ;;
-    clear-all)   git_ci_clear_all   "$@" ;;
-    hist)        git_ci_hist        "$@" ;;
-    hists)       git_ci_hist -m --first-parent --stat  "$@" ;;
-    histp)       git_ci_hist -m --first-parent --patch "$@" ;;
-    *)           expanded_alias=($(git config --get "alias.$git_ci_command")) \
-                    || fatal "Unrecognized command: $git_ci_command"
-                 eval git ci "${expanded_alias[0]}" "$testset" "${expanded_alias[@]:1}" "$@"
-                 ;;
+    config)         git_ci_config                         "$@" ;;
+    cleanup)        git_ci_cleanup                             ;;
+    test)           git_ci_test                                ;;
+    add)            git_ci_add                                 ;;
+    commit)         git_ci_commit                              ;;
+    get)            git_ci_get                            "$@" ;;
+    resources)      git_ci_config_resources                    ;;
+    steps-test)     git_ci_steps_test                     "$@" ;;
+    steps-test-all) git_ci_steps_test_all                 "$@" ;;
+    run)            git_ci_run                            "$@" ;;
+    run-linear)     git_ci_run_linear                     "$@" ;;
+    run-bisect)     git_ci_run_bisect                     "$@" ;;
+    run-sparse)     git_ci_run_sparse                     "$@" ;;
+    diff)           git_ci_diff                           "$@" ;;
+    show)           git_ci_show                           "$@" ;;
+    cherry-pick)    git_ci_cherry_pick                    "$@" ;;
+    last)           git_ci_last                           "$@" ;;
+    gen-hist)       git_ci_gen_hist                       "$@" ;;
+    list)           git_ci_list                           "$@" ;;
+    listdiff)       git_ci_listdiff                       "$@" ;;
+    clear)          git_ci_clear                          "$@" ;;
+    clear-all)      git_ci_clear_all                      "$@" ;;
+    hist)           git_ci_hist                           "$@" ;;
+    hists)          git_ci_hist -m --first-parent --stat  "$@" ;;
+    histp)          git_ci_hist -m --first-parent --patch "$@" ;;
+    *)              expanded_alias=($(git config --get "alias.$git_ci_command")) \
+                       || fatal "Unrecognized command: $git_ci_command"
+                    eval git ci "${expanded_alias[0]}" "$testset" "${expanded_alias[@]:1}" "$@"
+                    ;;
 esac
