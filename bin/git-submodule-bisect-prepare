@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -e
+
+notif() { echo "== git submodule-bisect-prepare: $@" >&2 ; }
+fatal() { notif "$@" ; exit 1        ; }
+
+submodule_dir="$1" && shift
+source_branch="$1" && shift
+target_branch="$1" && shift
+
+current_commit=$(   cd "$submodule_dir"
+                    current_commit="$(git rev-parse "$source_branch")"
+                    git checkout "$source_branch" >&2
+                    echo "$current_commit"
+                )
+
+git add "$submodule_dir"
+git commit --allow-empty --message "!!! git submodule-bisect-prepare source_branch $source_branch: $current_commit"
+
+while true; do
+    current_commit=$(   cd $submodule_dir
+                        current_commit=$(git next "$current_commit" "$target_branch")
+                        git checkout "$current_commit" >&2
+                        echo "$current_commit"
+                    )
+    git add "$submodule_dir"
+    git commit -m "!!! git submodule-bisect-prepare: $current_commit"
+done
