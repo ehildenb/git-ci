@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+
+set -e
+
+notif() { echo "== git test-next: $@" >&2 ; }
+fatal() { notif "$@" ; exit 1             ; }
+
+testing_branch="$1" && shift
+target_branch="$1"  && shift
+
+keep_going='false'
+if [[ "$1" == '--keep-going' ]]; then
+    keep_going='true'
+    shift
+fi
+
+next_test="$(git next "$testing_branch" "$target_branch")"
+
+notif "Next candidate commit: $next_test"
+
+# go to next commit
+git checkout "$next_test"
+notif "Running test: $@"
+
+exit_status='0'
+"$@" || exit_status="$?"
+
+# advance branch pointer?
+if [[ "$exit_status" == '0' ]]; then
+    notif "Test success!"
+    git checkout -B "$testing_branch"
+else
+    notif "Test failure!"
+    if [[ "$keep_going" == 'true' ]]; then
+        git checkout -B "$testing_branch"
+        exit_status='0'
+    else
+        git checkout "$testing_branch"
+    fi
+fi
+
+exit "$exit_status"
