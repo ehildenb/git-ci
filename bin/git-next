@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -e
+
+notif() { echo "== git next: $@" >&2 ; }
+fatal() { notif "$@" ; exit 1        ; }
+
+source_branch="$1" && shift
+target_branch="$1" && shift
+
+source_commit_id="$(git rev-parse "$source_branch")"
+target_commit_id="$(git rev-parse "$target_branch")"
+
+### Check if we've already met the target
+[[ "$source_commit_id" != "$target_commit_id" ]] \
+    || fatal "No next commit!"
+
+### Otherwise compute the next commit
+merge_base_commit_id="$(git merge-base "$source_commit_id" "$target_commit_id")"
+next_commit="$(git rev-list "$target_commit_id" '^'"$merge_base_commit_id" | tail -n1)"
+
+echo "$next_commit"
