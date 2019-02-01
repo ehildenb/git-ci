@@ -18,8 +18,12 @@ while true; do
                         git checkout "$current_commit" >&2
                     )
 
+    commit_msg=$(   cd "$submodule_dir"
+                    git log --pretty=format:'%h - %s' --max-count=1
+                )
+
     git add "$submodule_dir"
-    git commit --allow-empty --message "git submodule-bisect-prepare: $current_commit"
+    git commit --allow-empty --message "git submodule-bisect-prepare: $commit_msg"
 
     current_commit=$(   cd "$submodule_dir"
                         git next "$current_commit" "$target_branch"
