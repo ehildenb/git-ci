@@ -370,7 +370,7 @@ git_ci_steps_test() {
         notif "running: $test_step"
 
         # notice use of `which time` to avoid shell builtin time.
-        `which time` --quiet --format '%x %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
+        `which time` --quiet --format '%x %es %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
             || exit_status="$?"
 
         while read summary_line; do
