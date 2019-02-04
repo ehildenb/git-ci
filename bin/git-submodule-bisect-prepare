@@ -9,21 +9,23 @@ submodule_dir="$1" && shift
 source_branch="$1" && shift
 target_branch="$1" && shift
 
+notif "submodule: $submodule_dir"
+notif "source_branch: $source_branch"
+notif "target_branch: $target_branch"
+
 current_commit=$(   cd "$submodule_dir"
                     git rev-parse "$source_branch"
                 )
 
-while true; do
-    current_commit=$(   cd "$submodule_dir"
-                        git checkout "$current_commit" >&2
-                    )
 
+while true; do
     commit_msg=$(   cd "$submodule_dir"
+                    git checkout "$current_commit" >&2
                     git log --pretty=format:'%h - %s' --max-count=1
                 )
 
     git add "$submodule_dir"
-    git commit --allow-empty --message "git submodule-bisect-prepare: $commit_msg"
+    git commit --allow-empty --message "submodule $submodule_dir: $commit_msg"
 
     current_commit=$(   cd "$submodule_dir"
                         git next "$current_commit" "$target_branch"
