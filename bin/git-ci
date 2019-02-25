@@ -268,10 +268,11 @@ git_ci_gen_hist() {
 
 # assumes that you have `git hist` command.
 git_ci_hist() {
-    local source_commit
+    local source_commit base_commit
     set_source_commit "$@" || shift "$?"
+    base_commit='master'
 
-    git hist "$(git_ci_gen_hist "$source_commit")" "$source_commit" "$@"
+    git hist "$(git_ci_gen_hist "$base_commit")..$(git_ci_gen_hist "$source_commit")" -m --first-parent "$@"
 }
 
 # Running Tests
@@ -567,6 +568,7 @@ case "$git_ci_command" in
     cherry-pick)    git_ci_cherry_pick                    "$@" ;;
     last)           git_ci_last                           "$@" ;;
     gen-hist)       git_ci_gen_hist                       "$@" ;;
+    hist)           git_ci_hist                           "$@" ;;
     list)           git_ci_list                           "$@" ;;
     listdiff)       git_ci_listdiff                       "$@" ;;
     clear)          git_ci_clear                          "$@" ;;
