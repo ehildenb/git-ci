@@ -366,16 +366,16 @@ git_ci_steps_test() {
 
     git_ci_cleanup
 
+    git_ci_config_get "test.$testset.step" >/dev/null
+
     while read test_step; do
         notif "running: $test_step"
 
         # notice use of `which time` to avoid shell builtin time.
-        `which time` --quiet --format '%x %es %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
+        `which time` --quiet --format '%x %es %Us %Ss %MKB %C' --output "$summary_file" bash -c "$test_step" &>> "$output_file" \
             || exit_status="$?"
 
-        while read summary_line; do
-            notif "summary: $summary_line"
-        done < <(cat "$summary_file" | tail -n1)
+        notif "summary: $(cat $summary_file | tail -n1)"
 
         if [[ "$exit_status" == '0' ]]; then
             notif "success: $test_step"
