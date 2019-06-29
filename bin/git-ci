@@ -357,12 +357,13 @@ git_ci_test() {
 }
 
 git_ci_steps_test() {
-    local test_step exit_status summary_line summary_file output_file
+    local test_step exit_status summary_line summary_file col_summary_file output_file
 
     exit_status='0'
-    output_file="$(mktemp  --tmpdir="$git_ci_tmpdir"  output.XXXXXXX)"
-    summary_file="$(mktemp --tmpdir="$git_ci_tmpdir" summary.XXXXXXX)"
-    trap "rm -rf $output_file $summary_file" INT TERM EXIT
+    output_file="$(mktemp      --tmpdir="$git_ci_tmpdir"             output.XXXXXXX)"
+    summary_file="$(mktemp     --tmpdir="$git_ci_tmpdir"            summary.XXXXXXX)"
+    col_summary_file="$(mktemp --tmpdir="$git_ci_tmpdir" collimated_summary.XXXXXXX)"
+    trap "rm -rf $output_file $summary_file $col_summary_file" INT TERM EXIT
 
     git_ci_cleanup
 
@@ -389,8 +390,12 @@ git_ci_steps_test() {
     git_ci_track_files
     git_ci_cleanup
 
+    # collimated summary
+    echo "testset: $testset"                             > "$col_summary_file"
+    cat "$summary_file" | sed 's/bash -c//' | column -t >> "$col_summary_file"
+
     # record notes
-    git notes --ref ci/summary append         --file "$summary_file"
+    git notes --ref ci/summary append         --file "$col_summary_file"
     git notes --ref ci/output  add    --force --file "$output_file"
 
     if [[ "$exit_status" == '0' ]]; then
