@@ -358,7 +358,7 @@ git_ci_test() {
 }
 
 git_ci_steps_test() {
-    local test_step exit_status summary_line summary_file col_summary_file output_file
+    local num_runs test_step local_exit_status exit_status summary_line summary_file col_summary_file output_file
 
     exit_status='0'
     output_file="$(mktemp      --tmpdir="$git_ci_tmpdir"             output.XXXXXXX)"
@@ -366,34 +366,44 @@ git_ci_steps_test() {
     col_summary_file="$(mktemp --tmpdir="$git_ci_tmpdir" collimated_summary.XXXXXXX)"
     trap "rm -rf $output_file $summary_file $col_summary_file" INT TERM EXIT
 
-    git_ci_cleanup
+    num_runs="1"
+    [[ -z "${1:-}" ]] || { num_runs="$1" ; shift ; }
 
     git_ci_config_get "test.$testset.step" >/dev/null
 
-    while read test_step; do
-        notif "running: $test_step"
+    for run_num in $(seq 1 "$num_runs"); do
 
-        # notice use of `which time` to avoid shell builtin time.
-        `which time` --quiet --format '%x %es %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
-            || exit_status="$?"
+        git_ci_cleanup
+        printf "" > "$summary_file"
 
-        notif "summary: $(cat $summary_file | tail -n1)"
+        while read test_step; do
+            notif "running: $test_step"
 
-        if [[ "$exit_status" == '0' ]]; then
-            notif "success: $test_step"
-        else
-            notif "failure: $test_step"
-            break
-        fi
-    done < <(git_ci_config --get-all "test.$testset.step")
+            # notice use of `which time` to avoid shell builtin time.
+            local_exit_status='0'
+            `which time` --quiet --format '%x %es %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
+                || local_exit_status="$?"
 
-    # record output files
-    git_ci_track_files
-    git_ci_cleanup
+            notif "summary: $(cat $summary_file | tail -n1)"
 
-    # collimated summary
-    echo "testset: $testset"                             > "$col_summary_file"
-    cat "$summary_file" | sed 's/bash -c//' | column -t >> "$col_summary_file"
+            if [[ "$local_exit_status" == '0' ]]; then
+                notif "success: $test_step"
+            else
+                exit_status="$local_exit_status"
+                notif "failure: $test_step"
+                break
+            fi
+        done < <(git_ci_config --get-all "test.$testset.step")
+
+        # record output files
+        git_ci_track_files
+        git_ci_cleanup
+
+        # collimated summary
+        echo "testset: $testset - $run_num"                 >> "$col_summary_file"
+        cat "$summary_file" | sed 's/bash -c//' | column -t >> "$col_summary_file"
+
+    done
 
     # record notes
     git notes --ref ci/summary append         --file "$col_summary_file"
@@ -416,12 +426,18 @@ git_ci_steps_test_multi() {
         $0 "$testset" steps-test
     done
 }
+
 git_ci_steps_test_all() {
     local target_branch keep_going
 
     target_branch="$1" && shift
+    keep_going=()
+    if [[ ! -z "${1:-}" ]] && [[ "$1" == '--keep-going' ]]; then
+        keep_going=(--keep-going)
+        shift
+    fi
 
-    while git test-next "tested-$testset" "$target_branch" "$@" git ci "$testset" steps-test "$keep_going"; do
+    while git test-next "tested-$testset" "$target_branch" ${keep_going[@]-} git ci "$testset" steps-test "$@"; do
         continue
     done
 }
