@@ -399,14 +399,13 @@ git_ci_steps_test() {
         git_ci_track_files
         git_ci_cleanup
 
-        # collimated summary
-        echo "testset: $testset - $run_num"                 >> "$col_summary_file"
+        # record summary
+        echo "testset: $testset - $(date)"                  >> "$col_summary_file"
         cat "$summary_file" | sed 's/bash -c//' | column -t >> "$col_summary_file"
-
+        git notes --ref ci/summary append --file "$col_summary_file"
     done
 
-    # record notes
-    git notes --ref ci/summary append         --file "$col_summary_file"
+    # record all output
     git notes --ref ci/output  add    --force --file "$output_file"
 
     if [[ "$exit_status" == '0' ]]; then
