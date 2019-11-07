@@ -64,11 +64,12 @@ git_ci_config_get_or() {
         || echo "$default"
 }
 
-git_ci_config_activeTests()  { git_ci_config_get    "ci.activeTests"              ; }
-git_ci_config_requestFile()  { git_ci_config_get    "ci.requestFile"              ; }
-git_ci_config_trackedFiles() { git_ci_config_get    "test.$testset.trackedFiles"  ; }
-git_ci_config_command()      { git_ci_config_get    "test.$testset.command"       ; }
-git_ci_config_resources()    { git_ci_config_get_or "test.$testset.resources" 100 ; }
+git_ci_config_activeTests()  { git_ci_config_get              "ci.activeTests"              ; }
+git_ci_config_requestFile()  { git_ci_config_get              "ci.requestFile"              ; }
+git_ci_config_trackedFiles() { git_ci_config_get              "test.$testset.trackedFiles"  ; }
+git_ci_config_command()      { git_ci_config_get              "test.$testset.command"       ; }
+git_ci_config_resources()    { git_ci_config_get_or           "test.$testset.resources" 100 ; }
+git_ci_config_steps()        { git_ci_config        --get-all "test.$testset.step"          ; }
 
 # Storing Results
 # ---------------
@@ -369,7 +370,7 @@ git_ci_steps_test() {
     num_runs="1"
     [[ -z "${1:-}" ]] || { num_runs="$1" ; shift ; }
 
-    git_ci_config_get "test.$testset.step" >/dev/null
+    git_ci_config_steps >/dev/null
 
     for run_num in $(seq 1 "$num_runs"); do
 
@@ -393,7 +394,7 @@ git_ci_steps_test() {
                 notif "failure: $test_step"
                 break
             fi
-        done < <(git_ci_config --get-all "test.$testset.step")
+        done < <(git_ci_config_steps)
 
         # record output files
         git_ci_track_files
