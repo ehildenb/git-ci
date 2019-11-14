@@ -425,10 +425,13 @@ git_ci_steps_test() {
 }
 
 git_ci_steps_test_multi() {
-    local test_branch
+    local test_branch shifted
 
     while [[ "$#" -gt '0' ]]; do
-        set_source_commit "$@" || shift "$?"
+        shifted='0'
+        set_source_commit "$@" || shifted="$?"
+        [[ "$shifted" == '1' ]] || fatal "Does $1 exist?"
+        shift "$shifted"
         source_commit_id="$(git rev-parse "$source_commit")"
         git checkout "$source_commit_id"
         $0 "$testset" steps-test
