@@ -292,73 +292,6 @@ git_ci_cleanup() {
     git checkout -- ./
 }
 
-git_ci_request() {
-    local source_commit ci_test
-    set_source_commit "$@" || shift "$?"
-
-    for ci_test in $(git_ci_config_activeTests); do
-        echo "$git_ci_dir $source_commit $ci_test" >> "$(git_ci_config_requestFile)"
-    done
-}
-
-git_ci_run_request() {
-    local request_file request_file_tmp repo ref ci_test ci_base run_repo run_ref run_ci_test
-    local resources_dir resources_file total_resources
-
-    # NOTE: must be run from directory with `ci_requests` present!
-    request_file="$(pwd)/ci_requests"
-    if [[ ! -f "$request_file" ]]; then
-        notif "No requests pending."
-        return 0
-    fi
-
-    request_file_tmp="$(mktemp "$request_file.XXXXXX")"
-    trap "rm -rf $request_file_tmp" INT TERM EXIT
-    mv "$request_file" "$request_file_tmp"
-
-    run_repo=''
-    run_ref=''
-    run_ci_test=''
-
-    while read repo ref ci_test; do
-
-        resources_dir="$git_ci_resources/$repo"
-        resources_file="$resources_dir/$ci_test"
-
-        if [[ "$run_repo" == '' ]] && [[ ! -f "$resources_file" ]]; then
-
-            mkdir -p "$resources_dir"
-            echo "$(cd "$repo" ; git ci $ci_test resources)" > "$resources_file"
-            trap "rm -rf $resources_file" INT TERM EXIT
-
-            total_resources="$({ find "$git_ci_resources" -type f -exec cat {} \; | tr '\n' '+' ; echo 0 ; } | bc)"
-            if [[ "$total_resources" -le 100 ]]; then
-                run_repo="$repo"
-                run_ref="$ref"
-                run_ci_test="$ci_test"
-            else
-                notif "Postponing job (resource limit reached): $repo $rep $ci_test"
-                echo "$repo $ref $ci_test" >> "$request_file"
-            fi
-
-        else
-            notif "Postponing job (job already started): $repo $ref $ci_test"
-            echo "$repo $ref $ci_test" >> "$request_file"
-        fi
-    done < "$request_file_tmp"
-
-    if [[ "$run_repo" != '' ]]; then
-        notif "Running tests: $run_repo $run_ref $run_ci_test"
-        ( cd "$run_repo"
-          ci_base="$(git ci config --get 'ci.ciBase')"
-          git ci "$run_ci_test" run-sparse "$ci_base" "$run_ref"
-          git branch --force "ci/$run_ref/$run_ci_test" "$(git ci "$run_ci_test" gen-hist "$run_ref")"
-        )
-    else
-        notif "No tests started."
-    fi
-}
-
 git_ci_test() {
     local test_command
 
@@ -472,63 +405,6 @@ git_ci_steps_test_monitor() {
 
 }
 
-git_ci_steps_test_bisect() {
-    local source_commit_one source_commit_two
-    local mid_rev exit_status
-
-    set_source_commit_one_two "$@" || shift "$?"
-
-    exit_status='0'
-    mid_rev="$(git rev-list --bisect "$source_commit_one..$source_commit_two")"
-    if [[ "$mid_rev" == '' ]]; then
-        notif "Same revisions: $source_commit_one $source_commit_two"
-        exit 0
-    fi
-
-    if git_ci_steps_test_multi "$mid_rev"; then
-        git_ci_steps_test_bisect "$mid_rev" "$source_commit_two"
-    else
-        git_ci_steps_test_bisect "$source_commit_one" "$mid_rev"
-    fi
-}
-
-git_ci_run() {
-    local source_commit source_commit_id curhead exit_status worktree
-    set_source_commit "$@" || shift "$?"
-    source_commit_id="$(git rev-parse "$source_commit")"
-    exit_status='0'
-
-    # TODO: record exit codes and report back correct exit code?
-    # Perhaps with trailers in commit message? (git interpret-trailers)
-    # Otherwise, `git ci run-bisect/sparse` may act strange.
-    if git_ci_get "$source_commit" &>/dev/null; then
-        notif "Test results already exist for: $source_commit"
-    else
-        notif "Running tests on commit: $source_commit"
-
-        worktree="$git_ci_worktrees/$source_commit_id"
-        git worktree add "$worktree" "$source_commit_id"
-        trap "git worktree remove --force $worktree ; rm -rf $worktree ;" INT TERM EXIT
-
-        (   cd "$worktree"
-            git checkout "$source_commit_id"
-
-            git_ci_cleanup
-            git_ci_test     || exit_status="$?"
-            git_ci_add
-            git_ci_commit
-            git_ci_cleanup
-        )
-    fi
-
-    git branch --force "_ci" "$(git ci "$testset" gen-hist "$source_commit")"
-    if [[ "$#" != '0' ]]; then
-        git_ci_run "$@" || exit_status="$?"
-    fi
-
-    return "$exit_status"
-}
-
 # Over Spans of Commits
 # ---------------------
 
@@ -552,36 +428,6 @@ set_source_commit_one_two() {
     commit_comes_before_or_die "$source_commit_one" "$source_commit_two"
 
     return "$shift_count"
-}
-
-git_ci_run_linear() {
-    local curhead
-    local source_commit_one source_commit_two
-
-    set_source_commit_one_two "$@" || shift "$?"
-
-    git_ci_run $(git rev-list "$source_commit_one^..$source_commit_two" | tac)
-}
-
-git_ci_run_sparse() {
-    local source_commit_one source_commit_two
-    local bisect_commit_one bisect_commit_two
-    local exit_status
-
-    set_source_commit_one_two "$@" || shift "$?"
-
-    exit_status='0'
-
-    git_ci_run "$source_commit_one" "$source_commit_two" || exit_status="$?"
-
-    bisect_commit_two="$source_commit_two"
-    for bisect_commit_one in $(git_ci_list "$source_commit_two^"); do
-        git_ci_run_bisect "$bisect_commit_one" "$bisect_commit_two" || exit_status="$?"
-        bisect_commit_two="$bisect_commit_one"
-        [[ "$(git rev-parse "$bisect_commit_one")" != "$(git rev-parse "$source_commit_one")" ]] || break
-    done
-
-    return "$exit_status"
 }
 
 # Main
@@ -620,9 +466,6 @@ case "$git_ci_command" in
     steps-test-multi)   git_ci_steps_test_multi               "$@" ;;
     steps-test-monitor) git_ci_steps_test_monitor             "$@" ;;
     steps-test-bisect)  git_ci_steps_test_bisect              "$@" ;;
-    run)                git_ci_run                            "$@" ;;
-    run-linear)         git_ci_run_linear                     "$@" ;;
-    run-sparse)         git_ci_run_sparse                     "$@" ;;
     diff)               git_ci_diff                           "$@" ;;
     show)               git_ci_show                           "$@" ;;
     cherry-pick)        git_ci_cherry_pick                    "$@" ;;
