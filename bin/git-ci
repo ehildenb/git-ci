@@ -472,6 +472,26 @@ git_ci_steps_test_monitor() {
 
 }
 
+git_ci_steps_test_bisect() {
+    local source_commit_one source_commit_two
+    local mid_rev exit_status
+
+    set_source_commit_one_two "$@" || shift "$?"
+
+    exit_status='0'
+    mid_rev="$(git rev-list --bisect "$source_commit_one..$source_commit_two")"
+    if [[ "$mid_rev" == '' ]]; then
+        notif "Same revisions: $source_commit_one $source_commit_two"
+        exit 0
+    fi
+
+    if git_ci_steps_test_multi "$mid_rev"; then
+        git_ci_steps_test_bisect "$mid_rev" "$source_commit_two"
+    else
+        git_ci_steps_test_bisect "$source_commit_one" "$mid_rev"
+    fi
+}
+
 git_ci_run() {
     local source_commit source_commit_id curhead exit_status worktree
     set_source_commit "$@" || shift "$?"
@@ -543,29 +563,6 @@ git_ci_run_linear() {
     git_ci_run $(git rev-list "$source_commit_one^..$source_commit_two" | tac)
 }
 
-git_ci_run_bisect() {
-    local source_commit_one source_commit_two
-    local mid_rev exit_status
-
-    set_source_commit_one_two "$@" || shift "$?"
-
-    exit_status='0'
-
-    git_ci_run "$source_commit_one" "$source_commit_two" || exit_status="$?"
-
-    if ! git_ci_diff "$source_commit_one" "$source_commit_two" --quiet -- $(git_ci_config_trackedFiles); then
-        mid_rev="$(git rev-list --bisect "$source_commit_one..$source_commit_two")"
-        [[ "$mid_rev" != '' ]] \
-            && [[ "$mid_rev" != "$source_commit_one" ]] \
-            && [[ "$mid_rev" != "$source_commit_two" ]] \
-            || return "$exit_status"
-        git_ci_run_bisect "$source_commit_one" "$mid_rev" || exit_status="$?"
-        git_ci_run_bisect "$mid_rev" "$source_commit_two" || exit_status="$?"
-    fi
-
-    return "$exit_status"
-}
-
 git_ci_run_sparse() {
     local source_commit_one source_commit_two
     local bisect_commit_one bisect_commit_two
@@ -622,9 +619,9 @@ case "$git_ci_command" in
     steps-test-all)     git_ci_steps_test_all                 "$@" ;;
     steps-test-multi)   git_ci_steps_test_multi               "$@" ;;
     steps-test-monitor) git_ci_steps_test_monitor             "$@" ;;
+    steps-test-bisect)  git_ci_steps_test_bisect              "$@" ;;
     run)                git_ci_run                            "$@" ;;
     run-linear)         git_ci_run_linear                     "$@" ;;
-    run-bisect)         git_ci_run_bisect                     "$@" ;;
     run-sparse)         git_ci_run_sparse                     "$@" ;;
     diff)               git_ci_diff                           "$@" ;;
     show)               git_ci_show                           "$@" ;;
