@@ -3,7 +3,7 @@
 set -e
 
 notif() { echo "== git submodule-bisect-prepare: $@" >&2 ; }
-fatal() { notif "$@" ; exit 1        ; }
+fatal() { notif "$@" ; exit 1 ; }
 
 submodule_dir="$1" && shift
 source_branch="$1" && shift
