@@ -329,10 +329,10 @@ git_ci_steps_test() {
             notif "summary: $(cat $summary_file | tail -n1)"
 
             if [[ "$local_exit_status" == '0' ]]; then
-                notif "success: $test_step"
+                notif "success"
             else
                 exit_status="$local_exit_status"
-                notif "failure: $test_step"
+                notif "failure"
                 break
             fi
         done < <(git_ci_config_steps)
