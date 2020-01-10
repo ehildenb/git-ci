@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -e
+
+notif() { echo "== git next: $@" >&2 ; }
+fatal() { notif "$@" ; exit 1        ; }
+
+submodule_dir="$1" && shift
+target_branch='origin/master'
+[[ "$#" == '0' ]] || { target_branch="$1" ; shift ; }
+(   cd "$submodule_dir"
+    git fetch --all
+    git checkout "$target_branch"
+)
+submodule_message="$(cd "$submodule_dir" && git --no-pager log --oneline -n1 --format=format:'%h - %s')"
+
+git add "$submodule_dir"
+
+message_prefix=''
+[[ "$target_branch" == 'origin/master' ]] || message_prefix='!!! ('"$target_branch"') '
+git commit --message "$message_prefix$submodule_dir: $submodule_message"
