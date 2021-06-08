@@ -77,7 +77,9 @@ git_ci_config_requestFile()  { git_ci_config_get     "ci.requestFile"           
 git_ci_config_trackedFiles() { git_ci_config_get     "test.$testset.trackedFiles"  ; }
 git_ci_config_command()      { git_ci_config_get     "test.$testset.command"       ; }
 git_ci_config_resources()    { git_ci_config_get_or  "test.$testset.resources" 100 ; }
+git_ci_config_pre()          { git_ci_config_get_all "test.$testset.pre"           ; }
 git_ci_config_steps()        { git_ci_config_get_all "test.$testset.step"          ; }
+git_ci_config_post()         { git_ci_config_get_all "test.$testset.post"          ; }
 
 # Storing Results
 # ---------------
@@ -301,54 +303,70 @@ git_ci_test() {
 
 git_ci_steps_test() {
     local num_runs test_step local_exit_status exit_status summary_line summary_file col_summary_file output_file
+    local pre_summary_file post_summary_file pre_step post_step
+
+    if git notes --ref ci/summary show HEAD 2>&1 | grep "testset: ${testset}" &>/dev/null; then
+        notif "aready ran on: $(git rev-parse HEAD)"
+        exit 0
+    fi
 
     exit_status='0'
-    output_file="$(mktemp      --tmpdir="$git_ci_tmpdir"             output.XXXXXXX)"
-    summary_file="$(mktemp     --tmpdir="$git_ci_tmpdir"            summary.XXXXXXX)"
-    col_summary_file="$(mktemp --tmpdir="$git_ci_tmpdir" collimated_summary.XXXXXXX)"
-    trap "rm -rf $output_file $summary_file $col_summary_file" INT TERM EXIT
-
-    num_runs="1"
-    [[ -z "${1:-}" ]] || { num_runs="$1" ; shift ; }
+    output_file="$(mktemp       --tmpdir="$git_ci_tmpdir"             output.XXXXXXX)"
+    summary_file="$(mktemp      --tmpdir="$git_ci_tmpdir"            summary.XXXXXXX)"
+    col_summary_file="$(mktemp  --tmpdir="$git_ci_tmpdir" collimated_summary.XXXXXXX)"
+    pre_summary_file="$(mktemp  --tmpdir="$git_ci_tmpdir"        pre_summary.XXXXXXX)"
+    post_summary_file="$(mktemp --tmpdir="$git_ci_tmpdir"       post_summary.XXXXXXX)"
+    trap "rm -rf $output_file $summary_file $col_summary_file $pre_summary_file $post_summary_file" INT TERM EXIT
 
     git_ci_config_steps >/dev/null
 
-    for run_num in $(seq 1 "$num_runs"); do
+    git_ci_cleanup
+    printf "" > "$summary_file"
 
-        git_ci_cleanup
-        printf "" > "$summary_file"
+    while read pre_step; do
+        notif "running: $pre_step"
+        bash -c "$pre_step" &>> "$output_file" || fatal "pre step failed: $pre_step"
+        echo "pre: $pre_step" >> "$pre_summary_file"
+    done < <(git_ci_config_pre)
 
-        while read test_step; do
-            notif "running: $test_step"
+    while read test_step; do
+        notif "running: $test_step"
 
-            # notice use of `which time` to avoid shell builtin time.
-            local_exit_status='0'
-            `which time` --quiet --format '%x %es %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
-                || local_exit_status="$?"
+        # notice use of `which time` to avoid shell builtin time.
+        local_exit_status='0'
+        `which time` --quiet --format '%x %es %Us %Ss %MKB %C' --output "$summary_file" --append bash -c "$test_step" &>> "$output_file" \
+            || local_exit_status="$?"
 
-            notif "summary: $(cat $summary_file | tail -n1)"
+        notif "summary: $(cat $summary_file | tail -n1)"
 
-            if [[ "$local_exit_status" == '0' ]]; then
-                notif "success"
-            else
-                exit_status="$local_exit_status"
-                notif "failure"
-                break
-            fi
-        done < <(git_ci_config_steps)
+        if [[ "$local_exit_status" == '0' ]]; then
+            notif "success"
+        else
+            exit_status="$local_exit_status"
+            notif "failure"
+            break
+        fi
+    done < <(git_ci_config_steps)
 
-        # record output files
-        git_ci_track_files
-        git_ci_cleanup
+    while read post_step; do
+        notif "running: $post_step"
+        bash -c "$post_step" &>> "$output_file" || fatal "post step failed: $post_step"
+        echo "post: $post_step" >> "$post_summary_file"
+    done < <(git_ci_config_post)
 
-        # record summary
-        echo "testset: $testset - $(date)"                  >> "$col_summary_file"
-        cat "$summary_file" | sed 's/bash -c//' | column -t >> "$col_summary_file"
-        git notes --ref ci/summary append --file "$col_summary_file"
-    done
+    # record output files
+    git_ci_track_files
+    git_ci_cleanup
+
+    # record summary
+    echo "testset: $testset - $(date)"                   > "$col_summary_file"
+    cat "$pre_summary_file"                             >> "$col_summary_file"
+    cat "$summary_file" | sed 's/bash -c//' | column -t >> "$col_summary_file"
+    cat "$post_summary_file"                            >> "$col_summary_file"
+    git notes --ref ci/summary append --file "$col_summary_file"
 
     # record all output
-    git notes --ref ci/output  add    --force --file "$output_file"
+    git notes --ref ci/output add --force --file "$output_file"
 
     if [[ "$exit_status" == '0' ]]; then
         notif "test success"
