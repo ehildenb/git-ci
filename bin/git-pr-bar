@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+notif() { echo "== git pr-bar: $@" >&2 ; }
+fatal() { notif "$@" ; exit 1 ; }
+
+git fetch --all
+git checkout _pr
+
+edit=true
+args=(--)
+while [[ "$#" -gt 0 ]]; do
+    arg="$1"
+    case "${arg}" in
+        --no-edit) edit=false       ; shift ;;
+        *)         args+=("${arg}") ; shift ;;
+    esac
+done
+[[ "${#args[@]}" -le 1 ]] || set "${args[@]}"
+
+while [[ "$#" -gt 0 ]]; do
+    branch="$1" ; shift
+    merge_base_commit=$(git rev-parse $(git merge-base _pr "${branch}"))
+    branch_commit=$(git rev-parse "${branch}")
+    if [[ "${merge_base_commit}" != "${branch_commit}" ]]; then
+        ! ${edit} || git merge           "${branch}"
+          ${edit} || git merge --no-edit "${branch}"
+        git commit --allow-empty --message "========================= ${branch} ========================="
+    fi
+done
+
+git checkout pr
+! ${edit} || git rebase --interactive _pr
+  ${edit} || git rebase               _pr
