@@ -303,9 +303,15 @@ git_ci_test() {
 
 git_ci_steps_test() {
     local num_runs test_step local_exit_status exit_status summary_line summary_file col_summary_file output_file
-    local pre_summary_file post_summary_file pre_step post_step
+    local pre_summary_file post_summary_file pre_step post_step test_anyway
 
-    if git notes --ref ci/summary show HEAD 2>&1 | grep "testset: ${testset}" &>/dev/null; then
+    test_anyway=false
+    if [[ ! -z "${1:-}" ]] && [[ "$1" == '--test-anyway' ]]; then
+        test_anyway=true
+        shift
+    fi
+
+    if ! $test_anyway && git notes --ref ci/summary show HEAD 2>&1 | grep "testset: ${testset}" &>/dev/null; then
         notif "aready ran on: $(git rev-parse HEAD)"
         exit 0
     fi
@@ -359,10 +365,10 @@ git_ci_steps_test() {
     git_ci_cleanup
 
     # record summary
-    echo "testset: $testset - $(date)"                   > "$col_summary_file"
-    cat "$pre_summary_file"                             >> "$col_summary_file"
-    cat "$summary_file" | sed 's/bash -c//' | column -t >> "$col_summary_file"
-    cat "$post_summary_file"                            >> "$col_summary_file"
+    echo "testset: $testset - $(date)"                           > "$col_summary_file"
+    cat "$pre_summary_file"  | tr --squeeze-repeats '[:space:]' >> "$col_summary_file"
+    cat "$summary_file"      | sed 's/bash -c//' | column -t    >> "$col_summary_file"
+    cat "$post_summary_file" | tr --squeeze-repeats '[:space:]' >> "$col_summary_file"
     git notes --ref ci/summary append --file "$col_summary_file"
 
     # record all output
