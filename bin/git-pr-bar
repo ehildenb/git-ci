@@ -26,7 +26,10 @@ while [[ "$#" -gt 0 ]]; do
     if [[ "${merge_base_commit}" != "${branch_commit}" ]]; then
         ! ${edit} || git merge           "${branch}"
           ${edit} || git merge --no-edit "${branch}"
-        git commit --allow-empty --message "========================= ${branch} ========================="
+    fi
+    branch_separator="========================= ${branch} ========================="
+    if ! git log --oneline --max-count 1 | grep "${branch_separator}"; then
+        git commit --allow-empty --message "${branch_separator}"
     fi
 done
 
